@@ -10,7 +10,7 @@ export interface Narration {
 }
 
 // Hàm helper để tìm binary path tối ưu (ưu tiên dùng command global nếu chạy trên production Linux/Cloud Run)
-function getFfmpegPath(): string {
+export function getFfmpegPath(): string {
   try {
     execFileSync("ffmpeg", ["-version"], { stdio: "ignore" });
     return "ffmpeg";
@@ -19,7 +19,7 @@ function getFfmpegPath(): string {
   }
 }
 
-function getFfprobePath(): string {
+export function getFfprobePath(): string {
   try {
     execFileSync("ffprobe", ["-version"], { stdio: "ignore" });
     return "ffprobe";

@@ -6,7 +6,7 @@ import crypto from "crypto";
 import { exec } from "child_process";
 import util from "util";
 import { analyzeVideo } from "@/lib/gemini";
-
+import { getFfmpegPath } from "@/lib/ffmpeg";
 const execPromise = util.promisify(exec);
 // Cache trong RAM (Ngày 6 bác sẽ chuyển cái này lên Firestore)
 const analysisCache = new Map<string, any>(); 
@@ -35,8 +35,9 @@ export async function POST(req: Request) {
 
       // 2. NÉN VIDEO (PRO FEATURE: Giảm 80% input token)
       // Hạ xuống 1 khung hình/giây, scale rộng tối đa 512px, bỏ luôn audio
+      const ffmpegPath = getFfmpegPath();
       await execPromise(
-        `ffmpeg -y -i "${originalPath}" -vf "fps=1,scale=512:-2" -c:v libx264 -preset ultrafast -crf 35 -ar 16000 -ac 1 -c:a aac -b:a 32k "${compressedPath}"`
+        `"${ffmpegPath}" -y -i "${originalPath}" -vf "fps=1,scale=512:-2" -c:v libx264 -preset ultrafast -crf 35 -ar 16000 -ac 1 -c:a aac -b:a 32k "${compressedPath}"`
       );
 
       // Đọc base64 của video đã nén
