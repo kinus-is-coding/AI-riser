@@ -18,7 +18,7 @@ RUN npm run build
 # 4. Stage Production Runner
 FROM node:22-slim AS runner
 
-# Cài ffmpeg + ffprobe hệ thống (CHẮC CHẮN chạy)
+# ✅ DÒNG NÀY LÀ CHÌA KHÓA: cài ffmpeg + ffprobe vào PATH của container
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
