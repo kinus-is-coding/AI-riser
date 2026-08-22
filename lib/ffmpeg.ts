@@ -1,4 +1,4 @@
-import { execFile, exec } from "child_process";
+import { execFile, exec, execFileSync } from "child_process";
 import ffmpegStaticPath from "ffmpeg-static";
 import ffprobeStatic from "ffprobe-static";
 import fs from "fs";
@@ -11,8 +11,8 @@ export interface Narration {
 
 // Hàm helper để tìm binary path tối ưu (ưu tiên dùng command global nếu chạy trên production Linux/Cloud Run)
 function getFfmpegPath(): string {
-  // Nếu có command toàn cục trên hệ thống, dùng luôn (như trong Docker)
   try {
+    execFileSync("ffmpeg", ["-version"], { stdio: "ignore" });
     return "ffmpeg";
   } catch {
     return ffmpegStaticPath || "ffmpeg";
@@ -21,6 +21,7 @@ function getFfmpegPath(): string {
 
 function getFfprobePath(): string {
   try {
+    execFileSync("ffprobe", ["-version"], { stdio: "ignore" });
     return "ffprobe";
   } catch {
     return ffprobeStatic.path || "ffprobe";
