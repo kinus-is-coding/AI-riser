@@ -11,11 +11,11 @@ export interface Narration {
 
 // Bắt buộc trả về binary global "ffmpeg" & "ffprobe" đã cài bằng apt-get trong Dockerfile
 export function getFfmpegPath(): string {
-  return ffmpegStaticPath || "ffmpeg";
+  return "ffmpeg"; // Luôn dùng ffmpeg hệ thống (đã cài bằng apt-get)
 }
 
 export function getFfprobePath(): string {
-  return ffprobeStatic.path || "ffprobe";
+  return "ffprobe"; // Luôn dùng ffprobe hệ thống
 }
 
 function run(cmd: string, args: string[]): Promise<void> {
