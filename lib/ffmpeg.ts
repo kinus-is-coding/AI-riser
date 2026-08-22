@@ -1,6 +1,7 @@
 import { execFile } from "child_process";
 import fs from "fs";
-
+import ffmpegStaticPath from "ffmpeg-static";
+import ffprobeStatic from "ffprobe-static";
 export interface Narration {
   audioPath: string;
   startAt: number;
@@ -10,11 +11,11 @@ export interface Narration {
 
 // Bắt buộc trả về binary global "ffmpeg" & "ffprobe" đã cài bằng apt-get trong Dockerfile
 export function getFfmpegPath(): string {
-  return "ffmpeg";
+  return ffmpegStaticPath || "ffmpeg";
 }
 
 export function getFfprobePath(): string {
-  return "ffprobe";
+  return ffprobeStatic.path || "ffprobe";
 }
 
 function run(cmd: string, args: string[]): Promise<void> {
