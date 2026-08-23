@@ -140,7 +140,7 @@ export default function PreviewModal({
           <span className="text-zinc-600">|</span>
           <h1 className="text-sm font-semibold text-zinc-200 tracking-tight flex items-center gap-2">
             <Film className="w-4 h-4 text-zinc-400" />
-            ViddyScribe Studio Editor
+            VIDIO STUDIO
           </h1>
         </div>
 
