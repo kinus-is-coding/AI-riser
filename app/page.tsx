@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import PreviewModal, { Segment } from "@/components/PreviewModal";
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
@@ -8,6 +9,12 @@ export default function Home() {
   const [videoUrl, setVideoUrl] = useState("");
   const [error, setError] = useState("");
   const [voiceKey, setVoiceKey] = useState("nu-bac");
+  
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [segments, setSegments] = useState<Segment[]>([]);
+  const [videoBase64, setVideoBase64] = useState("");
+  const [mimeType, setMimeType] = useState("");
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -16,18 +23,23 @@ export default function Home() {
     setLoading(true);
     setError("");
     setVideoUrl("");
+    setShowModal(true);
+    setStatus("📤 Đang upload video...");
 
     try {
       const base64 = await fileToBase64(file);
-      const videoBase64 = base64.split(",")[1];
-      const mimeType = file.type;
+      const videoBase64Data = base64.split(",")[1];
+      const mime = file.type;
 
-      // --- BƯỚC 1: Gọi /api/analyze để lấy segments ---
-      setStatus("🧠 Đang phân tích video (Gemini)...");
+      setVideoBase64(videoBase64Data);
+      setMimeType(mime);
+
+      // Gọi API analyze
+      setStatus("🧠 Đang phân tích video bằng Gemini...");
       const analyzeRes = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoBase64, mimeType }),
+        body: JSON.stringify({ videoBase64: videoBase64Data, mimeType: mime }),
       });
 
       if (!analyzeRes.ok) {
@@ -35,17 +47,33 @@ export default function Home() {
         throw new Error(data.error || "Phân tích video thất bại");
       }
 
-      const { segments } = await analyzeRes.json();
-      if (!segments || !Array.isArray(segments) || segments.length === 0) {
+      const { segments: segs } = await analyzeRes.json();
+      if (!segs || !Array.isArray(segs) || segs.length === 0) {
         throw new Error("API analyze không trả về segments hợp lệ");
       }
 
-      // --- BƯỚC 2: Gọi /api/render kèm segments + voiceKey ---
-      setStatus("🎙️ Đang lồng tiếng + dựng video (TTS + FFmpeg)...");
+      setSegments(segs);
+      setStatus("preview");
+    } catch (err: any) {
+      setError(err.message);
+      setShowModal(false);
+      setLoading(false);
+    }
+  };
+
+  const handleRender = async () => {
+    setStatus("🎙️ Đang lồng tiếng + dựng video...");
+    
+    try {
       const renderRes = await fetch("/api/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoBase64, mimeType, segments, voiceKey }),
+        body: JSON.stringify({ 
+          videoBase64, 
+          mimeType, 
+          segments, 
+          voiceKey 
+        }),
       });
 
       if (!renderRes.ok) {
@@ -56,12 +84,22 @@ export default function Home() {
       const blob = await renderRes.blob();
       setVideoUrl(URL.createObjectURL(blob));
       setStatus("");
+      setShowModal(false);
     } catch (err: any) {
       setError(err.message);
-      setStatus("");
+      setShowModal(false);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancel = () => {
+    setShowModal(false);
+    setLoading(false);
+    setStatus("");
+    setSegments([]);
+    setVideoBase64("");
+    setMimeType("");
   };
 
   return (
@@ -83,7 +121,6 @@ export default function Home() {
           />
         </label>
 
-        {/* Đổi value cho khớp với các key trong VoiceKey của lib/google-tts.ts */}
         <select
           value={voiceKey}
           onChange={(e) => setVoiceKey(e.target.value)}
@@ -96,10 +133,6 @@ export default function Home() {
           <option value="nam-nam">👨 Nam - Nam</option>
         </select>
       </div>
-
-      {loading && status && (
-        <p className="mt-6 text-yellow-400 animate-pulse">{status}</p>
-      )}
 
       {error && <p className="mt-6 text-red-400 max-w-xl text-center">❌ {error}</p>}
 
@@ -115,6 +148,15 @@ export default function Home() {
           </a>
         </div>
       )}
+
+      <PreviewModal
+        isOpen={showModal}
+        status={status}
+        segments={segments}
+        onSegmentsChange={setSegments}
+        onRender={handleRender}
+        onCancel={handleCancel}
+      />
     </main>
   );
 }
