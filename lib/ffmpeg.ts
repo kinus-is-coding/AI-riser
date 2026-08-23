@@ -1,7 +1,7 @@
-import { execFile } from "child_process";
-import fs from "fs";
+import { execFile, execSync } from "child_process";
 import ffmpegStaticPath from "ffmpeg-static";
 import ffprobeStatic from "ffprobe-static";
+
 export interface Narration {
   audioPath: string;
   startAt: number;
@@ -12,15 +12,28 @@ export interface Narration {
 // Bắt buộc trả về binary global "ffmpeg" & "ffprobe" đã cài bằng apt-get trong Dockerfile
 export function getFfmpegPath(): string {
   try {
-    const result = require("child_process").execSync("which ffmpeg").toString().trim();
-    console.log("✅ ffmpeg found at:", result);
-    return "ffmpeg";
-  } catch (e) {
-    console.error("❌ ffmpeg NOT in PATH");
-    throw new Error("ffmpeg not installed in container");
+    const result = execSync("which ffmpeg", { stdio: ["pipe", "pipe", "ignore"] }).toString().trim();
+    if (result) return result;
+  } catch {
+    // fallback to static binary
   }
+  if (typeof ffmpegStaticPath === "string" && ffmpegStaticPath) {
+    return ffmpegStaticPath;
+  }
+  return "ffmpeg";
 }
+
 export function getFfprobePath(): string {
+  try {
+    const result = execSync("which ffprobe", { stdio: ["pipe", "pipe", "ignore"] }).toString().trim();
+    if (result) return result;
+  } catch {
+    // fallback to static binary
+  }
+  const staticPath = (ffprobeStatic as { path?: string })?.path;
+  if (typeof staticPath === "string" && staticPath) {
+    return staticPath;
+  }
   return "ffprobe";
 }
 

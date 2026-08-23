@@ -1,0 +1,8 @@
+{
+  "name": "ViddyScribe",
+  "description": "AI-powered video audio description in Vietnamese for blind and visually impaired users",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

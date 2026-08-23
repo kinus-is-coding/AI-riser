@@ -1,13 +1,14 @@
 import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_API_KEY || "",
+  apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "",
 });
 
 export interface DescriptionSegment {
   start: number;
   end: number;
   text: string;
+  hasSpeech?: boolean;
 }
 
 const PROMPT = `You are a Senior Accessibility Video Description Specialist creating audio descriptions
@@ -148,14 +149,18 @@ export async function analyzeVideo(
   console.log("===========================");
 
   const parsed = JSON.parse(rawText || '{"segments":[]}');
-  const segments = (parsed.segments ?? [])
-    .filter(
-      (s: any) =>
-        s.text &&
-        typeof s.start === "number" &&
-        typeof s.end === "number"
-    )
-    .sort((a: any, b: any) => a.start - b.start);
+  const rawSegments: unknown[] = Array.isArray(parsed.segments) ? parsed.segments : [];
+  const segments: DescriptionSegment[] = rawSegments
+    .filter((s): s is DescriptionSegment => {
+      if (typeof s !== "object" || s === null) return false;
+      const candidate = s as Record<string, unknown>;
+      return (
+        typeof candidate.text === "string" &&
+        typeof candidate.start === "number" &&
+        typeof candidate.end === "number"
+      );
+    })
+    .sort((a, b) => a.start - b.start);
 
   console.log("=== PARSED & SORTED SEGMENTS ===");
   console.table(segments);

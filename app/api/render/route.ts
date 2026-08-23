@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "viddyscribe-"));
 
   try {
-    const { videoBase64, mimeType, segments, voiceKey } = await req.json();
+    const { videoBase64, segments, voiceKey } = await req.json();
 
     if (!videoBase64) {
       return NextResponse.json({ error: "Missing videoBase64" }, { status: 400 });
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     const selectedVoice: VoiceKey = voiceKey || "nu-bac";
 
     const audioResults = await Promise.all(
-      segments.map(async (seg, index) => {
+      segments.map(async (seg: { text: string; start: number; hasSpeech?: boolean }, index: number) => {
         const audio = await synthesizeSpeech(seg.text, selectedVoice);
         const audioPath = path.join(tmpDir, `narr-${index}.mp3`);
         fs.writeFileSync(audioPath, audio);
@@ -72,9 +72,10 @@ export async function POST(req: Request) {
         "Content-Disposition": 'attachment; filename="viddyscribe-vn.mp4"',
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error in /api/render:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown render error";
+    return NextResponse.json({ error: message }, { status: 500 });
   } finally {
     try {
       fs.rmSync(tmpDir, { recursive: true, force: true });

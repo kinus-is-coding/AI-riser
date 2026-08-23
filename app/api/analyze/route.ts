@@ -5,11 +5,11 @@ import path from "path";
 import crypto from "crypto";
 import { exec } from "child_process";
 import util from "util";
-import { analyzeVideo } from "@/lib/gemini";
+import { analyzeVideo, DescriptionSegment } from "@/lib/gemini";
 import { getFfmpegPath } from "@/lib/ffmpeg";
+
 const execPromise = util.promisify(exec);
-// Cache trong RAM (Ngày 6 bác sẽ chuyển cái này lên Firestore)
-const analysisCache = new Map<string, any>(); 
+const analysisCache = new Map<string, { segments: DescriptionSegment[] }>();
 
 export async function POST(req: Request) {
   try {
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       const compressedBase64 = fs.readFileSync(compressedPath).toString("base64");
 
       // 3. GỌI GEMINI VỚI VIDEO NHẸ TÊNH
-      const segments = await analyzeVideo(compressedBase64, "video/mp4");
+      const segments = await analyzeVideo(compressedBase64, mimeType || "video/mp4");
 
       const responseData = { segments };
       
@@ -53,10 +53,11 @@ export async function POST(req: Request) {
 
       return NextResponse.json(responseData);
     } finally {
-      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) {}
+      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error in /api/analyze:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown analysis error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
