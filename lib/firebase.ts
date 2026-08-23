@@ -1,7 +1,7 @@
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { getFirestore } from "firebase/firestore/lite";
-import { getStorage } from "firebase/storage";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore/lite";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,14 +12,23 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+// Khởi tạo app an toàn
+const getFirebaseApp = () => {
+  if (getApps().length > 0) return getApp();
+  return initializeApp(firebaseConfig);
+};
 
-export const auth = getAuth(app);
+// Lazy initialization cho Auth, DB, Storage (chỉ khởi tạo khi thực sự gọi đến ở Client)
+export const auth = (typeof window !== "undefined" ? getAuth(getFirebaseApp()) : {}) as Auth;
+export const db = (typeof window !== "undefined" ? getFirestore(getFirebaseApp()) : {}) as Firestore;
+export const storage = (typeof window !== "undefined" ? getStorage(getFirebaseApp()) : {}) as FirebaseStorage;
+
 export const googleProvider = new GoogleAuthProvider();
 
 export const loginWithGoogle = async () => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
+    const authInstance = getAuth(getFirebaseApp());
+    const result = await signInWithPopup(authInstance, googleProvider);
     return result.user;
   } catch (error) {
     console.error("Lỗi đăng nhập:", error);
@@ -27,6 +36,9 @@ export const loginWithGoogle = async () => {
   }
 };
 
-export const logout = () => signOut(auth);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+export const logout = () => {
+  if (typeof window !== "undefined") {
+    const authInstance = getAuth(getFirebaseApp());
+    return signOut(authInstance);
+  }
+};
