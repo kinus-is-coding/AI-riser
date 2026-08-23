@@ -11,9 +11,15 @@ export interface Narration {
 
 // Bắt buộc trả về binary global "ffmpeg" & "ffprobe" đã cài bằng apt-get trong Dockerfile
 export function getFfmpegPath(): string {
-  return "ffmpeg";
+  try {
+    const result = require("child_process").execSync("which ffmpeg").toString().trim();
+    console.log("✅ ffmpeg found at:", result);
+    return "ffmpeg";
+  } catch (e) {
+    console.error("❌ ffmpeg NOT in PATH");
+    throw new Error("ffmpeg not installed in container");
+  }
 }
-
 export function getFfprobePath(): string {
   return "ffprobe";
 }
