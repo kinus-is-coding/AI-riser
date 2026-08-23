@@ -1,15 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import {
-  Clock,
   Sparkles,
-  X,
   Check,
   Film,
   Play,
   Pause,
-  Volume2,
   Mic,
   SlidersHorizontal,
   ChevronRight,
@@ -69,24 +66,43 @@ export default function PreviewModal({
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}.${ms}`;
   };
 
-  const handleSeekToSegment = (start: number, index: number) => {
-    setActiveSegmentIndex(index);
-    if (videoRef.current) {
-      videoRef.current.currentTime = start;
+  // Hàm cập nhật vị trí segment tích cực dựa trên thời gian thực
+  const syncActiveSegment = (time: number) => {
+    if (segments.length === 0) return;
+    const activeIdx = segments.findIndex(
+      (s, idx) => time >= s.start && (time < s.end || idx === segments.length - 1)
+    );
+    if (activeIdx !== -1) {
+      setActiveSegmentIndex(activeIdx);
     }
   };
 
+  // Xử lý khi bấm chọn segment ở kịch bản hoặc timeline dưới
+  const handleSeekToSegment = (start: number, index: number) => {
+    // 1. Cập nhật UI ngay lập tức
+    setActiveSegmentIndex(index);
+    setCurrentTime(start);
+
+    // 2. Tua video tới vị trí đã chọn
+    if (videoRef.current) {
+      videoRef.current.currentTime = start + 0.01;
+    }
+  };
+
+  // Chạy khi video đang Play
   const handleTimeUpdate = () => {
     if (!videoRef.current) return;
     const time = videoRef.current.currentTime;
     setCurrentTime(time);
+    syncActiveSegment(time);
+  };
 
-    const activeIdx = segments.findIndex(
-      (s) => time >= s.start && time <= s.end
-    );
-    if (activeIdx !== -1 && activeIdx !== activeSegmentIndex) {
-      setActiveSegmentIndex(activeIdx);
-    }
+  // Chạy ngay khi video tua xong (kể cả khi đang PAUSE) -> Cập nhật UI tức thì
+  const handleSeeked = () => {
+    if (!videoRef.current) return;
+    const time = videoRef.current.currentTime;
+    setCurrentTime(time);
+    syncActiveSegment(time);
   };
 
   const togglePlay = () => {
@@ -172,6 +188,9 @@ export default function PreviewModal({
                   ref={videoRef}
                   src={videoSrc}
                   onTimeUpdate={handleTimeUpdate}
+                  onSeeked={handleSeeked}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
                   onEnded={() => setIsPlaying(false)}
                   className="w-full h-full object-contain"
                 />
