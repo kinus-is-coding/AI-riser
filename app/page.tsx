@@ -295,13 +295,19 @@ export default function Home() {
       </main>
 
       {/* Script Preview / Processing Modal */}
+      {/* Script Preview / Studio Processing Modal */}
       <PreviewModal
         isOpen={showModal}
         status={status}
         segments={segments}
+        videoBase64={videoBase64}
+        mimeType={mimeType}
+        voiceKey={voiceKey}
+        onVoiceKeyChange={setVoiceKey}
         onSegmentsChange={setSegments}
         onRender={handleRender}
         onCancel={handleCancel}
+        voices={VOICES}
       />
     </div>
   );
