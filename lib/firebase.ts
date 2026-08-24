@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore/lite";
-import { getStorage, FirebaseStorage } from "firebase/storage";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { getFirestore } from "firebase/firestore"; // ⚠️ Đổi sang "firebase/firestore" chuẩn, không dùng /lite
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,22 +13,18 @@ const firebaseConfig = {
 };
 
 // Khởi tạo app an toàn
-const getFirebaseApp = () => {
-  if (getApps().length > 0) return getApp();
-  return initializeApp(firebaseConfig);
-};
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Lazy initialization cho Auth, DB, Storage (chỉ khởi tạo khi thực sự gọi đến ở Client)
-export const auth = (typeof window !== "undefined" ? getAuth(getFirebaseApp()) : {}) as Auth;
-export const db = (typeof window !== "undefined" ? getFirestore(getFirebaseApp()) : {}) as Firestore;
-export const storage = (typeof window !== "undefined" ? getStorage(getFirebaseApp()) : {}) as FirebaseStorage;
+// Khởi tạo instance chuẩn trực tiếp
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
 
 export const googleProvider = new GoogleAuthProvider();
 
 export const loginWithGoogle = async () => {
   try {
-    const authInstance = getAuth(getFirebaseApp());
-    const result = await signInWithPopup(authInstance, googleProvider);
+    const result = await signInWithPopup(auth, googleProvider);
     return result.user;
   } catch (error) {
     console.error("Lỗi đăng nhập:", error);
@@ -37,8 +33,5 @@ export const loginWithGoogle = async () => {
 };
 
 export const logout = () => {
-  if (typeof window !== "undefined") {
-    const authInstance = getAuth(getFirebaseApp());
-    return signOut(authInstance);
-  }
+  return signOut(auth);
 };
