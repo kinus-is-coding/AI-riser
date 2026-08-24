@@ -31,10 +31,10 @@ export async function saveToHistory(
   voiceLabel: string,
   segments: Segment[]
 ): Promise<HistoryItem> {
-  // 1. Tận dụng hàm uploadToSupabase
+  if (!userId) throw new Error("Chưa có User ID");
+
   const { publicUrl, storagePath } = await uploadToSupabase(videoBlob, fileName);
 
-  // 2. Lưu Metadata vào Firestore
   const historyRef = collection(db, "users", userId, "history");
   const docData = {
     title: fileName,
@@ -61,37 +61,45 @@ export async function saveToHistory(
 }
 
 export async function fetchUserHistory(userId: string): Promise<HistoryItem[]> {
-  const historyRef = collection(db, "users", userId, "history");
-  const q = query(historyRef, orderBy("createdAt", "desc"));
-  const querySnapshot = await getDocs(q);
+  // Bắt buộc check userId để không bị crash lỗi CollectionReference
+  if (!userId) return [];
 
-  const history: HistoryItem[] = [];
-  querySnapshot.forEach((docSnap) => {
-    const data = docSnap.data();
-    let dateStr = "Vừa xong";
+  try {
+    const historyRef = collection(db, "users", userId, "history");
+    const q = query(historyRef, orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
 
-    if (data.createdAt?.toDate) {
-      dateStr = data.createdAt.toDate().toLocaleDateString("vi-VN", {
-        day: "2-digit",
-        month: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
+    const history: HistoryItem[] = [];
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      let dateStr = "Vừa xong";
+
+      if (data.createdAt?.toDate) {
+        dateStr = data.createdAt.toDate().toLocaleDateString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      history.push({
+        id: docSnap.id,
+        title: data.title || "Video Lồng Tiếng",
+        videoUrl: data.videoUrl || "",
+        storagePath: data.storagePath || "",
+        voiceKey: data.voiceKey || "nu-bac",
+        voiceLabel: data.voiceLabel || "Mặc định",
+        segments: data.segments || [],
+        createdAt: dateStr,
       });
-    }
-
-    history.push({
-      id: docSnap.id,
-      title: data.title || "Video Lồng Tiếng",
-      videoUrl: data.videoUrl || "",
-      storagePath: data.storagePath || "",
-      voiceKey: data.voiceKey || "nu-bac",
-      voiceLabel: data.voiceLabel || "Mặc định",
-      segments: data.segments || [],
-      createdAt: dateStr,
     });
-  });
 
-  return history;
+    return history;
+  } catch (error) {
+    console.error("Lỗi khi load lịch sử:", error);
+    return [];
+  }
 }
 
 export async function deleteHistoryItem(
@@ -99,12 +107,12 @@ export async function deleteHistoryItem(
   docId: string,
   storagePath?: string
 ): Promise<void> {
-  // Xóa file bên Supabase Storage
+  if (!userId || !docId) return;
+
   if (storagePath) {
     await supabase.storage.from("videos").remove([storagePath]);
   }
 
-  // Xóa document trên Firestore
   const docRef = doc(db, "users", userId, "history", docId);
   await deleteDoc(docRef);
 }
